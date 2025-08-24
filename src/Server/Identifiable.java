@@ -14,7 +14,7 @@ abstract class Identifiable<T> {
     protected Identifiable(){
         Class<?> cls = this.getClass();
 
-        counters.putIfAbsent(cls, new AtomicLong(0));
+        counters.putIfAbsent(cls, new AtomicLong(0)); //inserts a new pair counters.containsKey(cls) is false
         AtomicLong counter = counters.get(cls);
         this.id = counter.incrementAndGet();
     }
