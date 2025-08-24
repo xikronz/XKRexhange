@@ -1,5 +1,9 @@
 package Server;
 
+/**
+ * Asset class that tracks trade-able asssets with unqiue ids. Each asset has its own dedicated OrderBook which is
+ */
+
 public class Asset extends Identifiable<Asset>{
     private String name;
     private String tick;

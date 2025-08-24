@@ -3,10 +3,10 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong; //threadsafe counter that atomically increments its value
 import java.util.concurrent.ConcurrentHashMap; //threadsafe HashMap object that stores all idTypes
 
+/** Manages all Identification (Ids) generation across classes i.e. Assets, Orders, Orderbook
+ * Ensures Ids across assets can be duplicates but NOT within the same class
+ */
 abstract class Identifiable<T> {
-    /* Manages all Identification (Ids) generation across classes i.e. Assets, Orders, Orderbook
-     * Ensures Ids across assets can be duplicates but NOT within the same class
-     */
 
     private static final Map<Class<?>, AtomicLong> counters = new ConcurrentHashMap<>(); //aggreates all counters together
     private final long id; //assigns a unique id to each instance of Identifiable objects (note all Classes requiring an Id will extend Identifiable)
