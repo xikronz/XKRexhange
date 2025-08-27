@@ -1,4 +1,5 @@
-package Server;
+package com.xkrexchange.common.model;
+
 import java.math.BigDecimal;
 
 public class Price implements Comparable<Price>{

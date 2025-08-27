@@ -1,4 +1,6 @@
-package Server;
+package com.xkrexchange.common.model;
+
+import com.xkrexchange.matching.OrderBook;
 
 /**
  * Asset class that tracks trade-able asssets with unqiue ids. Each asset has its own dedicated OrderBook which is

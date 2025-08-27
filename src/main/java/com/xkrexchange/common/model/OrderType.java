@@ -1,4 +1,4 @@
-package Server;
+package com.xkrexchange.common.model;
 
 /** Enum Class for the types of client side order types
  * <p>LIMIT ORDER: fulfilled ONLY when OrderBook.getNBBOPrice.value >= Order.price.value</p>

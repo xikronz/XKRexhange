@@ -1,5 +1,7 @@
-package Server;
+package com.xkrexchange.matching;
 
+import com.xkrexchange.common.model.Asset;
+import com.xkrexchange.common.model.Order;
 import java.util.HashMap;
 import java.util.PriorityQueue;
 
@@ -11,4 +13,7 @@ import java.util.PriorityQueue;
  */
 public class MatchingEngine {
 
+    // TODO: Add your matching engine implementation here
+    // This will be called by the message queue consumer when orders arrive
+    
 }

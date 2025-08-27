@@ -1,0 +1,106 @@
+spring:
+  application:
+    name: xkr-exchange
+  
+  datasource:
+    # TODO: Configure your database connection
+    url: jdbc:postgresql://localhost:5432/xkr_exchange
+    username: ${DB_USERNAME:xkr_user}
+    password: ${DB_PASSWORD:changeme}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate # Use 'create-drop' for development, 'validate' for production
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  security:
+    jwt:
+      secret: ${JWT_SECRET:your-super-secret-jwt-key-change-this-in-production}
+      expiration: 86400000 # 24 hours in milliseconds
+      refresh-expiration: 604800000 # 7 days in milliseconds
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Kafka Configuration for Message Queue
+kafka:
+  bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+  producer:
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  consumer:
+    group-id: xkr-exchange-group
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+  topics:
+    orders: trading.orders
+    executions: trading.executions
+    cancellations: trading.cancellations
+    rejections: trading.rejections
+
+# Trading System Configuration
+trading:
+  order-gateway:
+    max-order-size: 1000000 # Maximum number of shares per order
+    max-order-value: 10000000.00 # Maximum dollar value per order
+    rate-limit:
+      orders-per-minute: 60 # Maximum orders per user per minute
+      enabled: true
+  
+  matching-engine:
+    batch-size: 100 # Number of orders to process in a batch
+    processing-interval: 100 # Milliseconds between processing cycles
+  
+  wallet:
+    reserve-timeout: 300000 # 5 minutes to hold reservations (milliseconds)
+    settlement-timeout: 30000 # 30 seconds for settlement completion
+
+# Logging Configuration
+logging:
+  level:
+    com.xkrexchange: INFO
+    org.springframework.security: DEBUG
+    org.springframework.kafka: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/xkr-exchange.log
+
+# Management and Health Check
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    kafka:
+      enabled: true
+    db:
+      enabled: true
+
+# Custom Application Properties
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+  
+  admin:
+    default-username: ${ADMIN_USERNAME:admin}
+    default-password: ${ADMIN_PASSWORD:changeme}
+  
+  api:
+    rate-limit:
+      enabled: true
+      requests-per-minute: 1000 

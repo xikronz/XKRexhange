@@ -1,4 +1,4 @@
-package Server;
+package com.xkrexchange.common.model;
 
 public class Order extends Identifiable<Order> {
     /**
