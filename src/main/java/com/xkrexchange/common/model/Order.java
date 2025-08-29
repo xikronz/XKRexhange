@@ -6,13 +6,16 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
      */
     private final long clientId;
     private final OrderType orderType;
-    
+    private final Asset asset;
+
     private final boolean isBid; //true -> Buy, false -> Sell
     private final int quantity;
-    private final Asset asset;
 
     private final Price executionPrice; // For LIMIT orders (and STOP if it becomes a limit)
     private final Price triggerPrice; // For STOP and STOP_LOSS orders
+
+    private int remaining; 
+    private boolean isFullyFilled = false; 
 
     /**
      * Overloaded Order constructor to initialize a LIMIT order
@@ -35,6 +38,7 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
         this.asset = a;
         this.executionPrice =eP;
         this.triggerPrice = tP;
+        this.remaining = shares; 
     }
 
     //LIMIT ORDER
@@ -65,18 +69,12 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
         return new Order(cId, oT, iB, shares, a, eP, tP);
     }
 
-    /**
-     * Implementation of Comparable interface for time-based ordering
-     * Orders are compared by their ID (which represents time of creation)
-     * Earlier orders (lower IDs) come before later orders (higher IDs)
-     * This ensures FIFO (First-In-First-Out) ordering at each price level
-     */
-    @Override
-    public int compareTo(Order other) throws NullPointerException{
-        if (other == null) {
-            throw new NullPointerException("Cannot compare to null Order");
-        }
-        return Long.compare(this.getId(), other.getId());
+    public boolean isFullyFilled(){
+        return isFullyFilled; 
+    }
+
+    public void updateOrder(Order o){
+        remaining = remaining - o.quantity;
     }
 
     // Getter methods
@@ -110,6 +108,20 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
 
     public Price getTriggerPrice() {
         return triggerPrice;
+    }
+
+    /**
+     * Implementation of Comparable interface for time-based ordering
+     * Orders are compared by their ID (which represents time of creation)
+     * Earlier orders (lower IDs) come before later orders (higher IDs)
+     * This ensures FIFO (First-In-First-Out) ordering at each price level
+     */
+    @Override
+    public int compareTo(Order other) throws NullPointerException{
+        if (other == null) {
+            throw new NullPointerException("Cannot compare to null Order");
+        }
+        return Long.compare(this.getId(), other.getId());
     }
 
     @Override
