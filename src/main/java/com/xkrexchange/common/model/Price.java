@@ -29,7 +29,8 @@ public class Price implements Comparable<Price>{
      * @return int < 0 if this.value < o.value; int = 0 if this.value == o.value; int > 0 if this.value > o.value;
      */
     @Override
-    public int compareTo(Price o){
+    public int compareTo(Price o)throws NullPointerException{
+        if (o==null) throw new NullPointerException("Cannot compare to a Null object");
         return this.getValue().compareTo(o.getValue());
     }
 
