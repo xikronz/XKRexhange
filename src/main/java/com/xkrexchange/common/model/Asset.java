@@ -31,7 +31,7 @@ public class Asset extends Identifiable<Asset>{
 
     public Asset(String n, String t, int initialPublicOffering, int sharesOut, BigDecimal tickIncrement){
         tick = tickIncrement; 
-        orderBook = new OrderBook(tickIncrement);
+        orderBook = new OrderBook(this);
 
         name = n; 
         ticker = t; 
