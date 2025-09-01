@@ -18,48 +18,35 @@ public class OrderBook extends Identifiable<OrderBook>{
 
     private Asset asset; 
 
-    private BigDecimal tick; 
-
     public OrderBook(Asset a){
         super();
-        tick = new BigDecimal("0.01");
         this.asset = a; 
-    }
-
-    public OrderBook(BigDecimal t){
-        super();
-        tick = t; 
     }
 
     public long getOrderBookId(){
         return getId();
     }
 
-    public Order getNationalBestBid() throws NoLiquidityException, MissingOrderException, NullPointerException {
+    public Order getNationalBestBid(){
         if (bids.isEmpty()){
-            throw new NoLiquidityException(String.format("No liquidity on bids available for %s", getAsset())); 
+            return null; 
         }
 
         Map.Entry<Price, LinkedBlockingQueue<Order>> bestBids = bids.firstEntry();
-        
         if (bestBids.getValue().isEmpty()){
-            throw new MissingOrderException(String.format("Asset {%s} trading at ${%s} has no current bid orders", getAsset(), bestBids.getKey())); 
+            return null; 
         }
-
         return bestBids.getValue().peek(); 
     }
 
-    public Order getNationalBestOffer() throws NoLiquidityException, MissingOrderException, NullPointerException{
+    public Order getNationalBestOffer(){
         if (asks.isEmpty()){
-            throw new NoLiquidityException(String.format("No liquidity on asks available for %s", getAsset()));
+            return null; 
         }
-
         Map.Entry<Price, LinkedBlockingQueue<Order>> bestAsks = asks.firstEntry(); 
-
         if (bestAsks.getValue().isEmpty()){
-            throw new MissingOrderException(String.format("Asset {%s} trading at ${%s} has no current bid orders", getAsset(), bestAsks.getKey()));
+            return null; 
         }
-
         return bestAsks.getValue().peek(); 
     }
 
@@ -91,52 +78,48 @@ public class OrderBook extends Identifiable<OrderBook>{
     }
 
     //HIGHEST EXECUTION PRIORITY 
-    private void executeMarketOrder(Order o) throws NoLiquidityException, MissingOrderException, NullPointerException{
+    private void executeMarketOrder(Order o){
         if (o.isBid()){
                 while (!o.isCompleted()){
                     Order bestOffer = getNationalBestOffer(); 
+                    if (bestOffer==null){
+                        break; 
+                    }
                     executeTrade(bestOffer, o);
                 }
             }
         else{
             while (!o.isCompleted()){
                 Order bestAsk = getNationalBestBid(); 
+                if (bestAsk==null){
+                    break; 
+                }        
                 executeTrade(o, bestAsk);
             }
         }
     }
 
-    private void executeLimitOrder(Order o) throws NullPointerException{
-        if (o.isBid()){
-            while(!o.isCompleted()){
-                try{
-                    Order bestOffer = getNationalBestOffer(); 
-                    Price clientBid = o.getExecutionPrice(); 
-                    if (clientBid.compareTo(bestOffer.getExecutionPrice())>=0){
-                        executeTrade(o, bestOffer);
-                    } else {
-                        //posting any remaining quantities in the order onto the orderbook 
-                        addToBook(o);
-                    }
-                } catch (NoLiquidityException e){
-                    addToBook(o); 
-                } 
-            }
-        } else {
-            while (!o.isCompleted()){
-                try{
-                    Order bestBid = getNationalBestBid(); 
-                    Price clientPrice = o.getExecutionPrice(); 
+    private void executeLimitOrder(Order o){
 
-                    if (clientPrice.compareTo(bestBid.getExecutionPrice())<=0){
-                        executeTrade(bestBid, o);
-                    } else {
-                        addToBook(o);
-                    }
-                } catch (NoLiquidityException e){
-                    addToBook(o);
-                }
+        while (!o.isCompleted()){
+            Order bestMatch = o.isBid()? getNationalBestOffer(): getNationalBestBid(); 
+
+            if (bestMatch == null){ break;}
+            if (canTrade(o, bestMatch)){
+                executeTrade(o, bestMatch);
+            } else {
+                break; 
             }
+        } if (!o.isCompleted()){
+            addToBook(o);
+        }
+    }
+
+    private boolean canTrade(Order o, Order bestMatch){
+        if (o.isBid()){
+            return (o.getExecutionPrice().compareTo(bestMatch.getExecutionPrice())>=0); 
+        } else {
+            return (o.getExecutionPrice().compareTo(bestMatch.getExecutionPrice())<=0); 
         }
     }
 
