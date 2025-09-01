@@ -1,6 +1,8 @@
 package com.xkrexchange.common.dto;
 
 import java.math.BigDecimal;
+import com.xkrexchange.common.model.OrderType;
+
 
 /**
  * Data Transfer Object for incoming order requests from frontend
@@ -8,7 +10,7 @@ import java.math.BigDecimal;
  */
 public class OrderRequestDto {
     
-    private String orderType; // "MARKET", "LIMIT", "STOP", "STOP_LIMIT"
+    private OrderType orderType; // "MARKET", "LIMIT", "STOP", "STOP_LIMIT"
     private boolean isBuyOrder; // true for BUY, false for SELL
     private String assetTicker; // e.g., "AAPL", "TSLA"
     private Long assetId; // Internal asset ID
@@ -20,7 +22,7 @@ public class OrderRequestDto {
     public OrderRequestDto() {}
     
     // Constructor for creating test instances
-    public OrderRequestDto(String orderType, boolean isBuyOrder, String assetTicker, 
+    public OrderRequestDto(OrderType orderType, boolean isBuyOrder, String assetTicker, 
                           Long assetId, int quantity, BigDecimal limitPrice, BigDecimal triggerPrice) {
         this.orderType = orderType;
         this.isBuyOrder = isBuyOrder;
@@ -32,8 +34,8 @@ public class OrderRequestDto {
     }
     
     // Getters and Setters
-    public String getOrderType() { return orderType; }
-    public void setOrderType(String orderType) { this.orderType = orderType; }
+    public OrderType getOrderType() { return orderType; }
+    public void setOrderType(OrderType orderType) { this.orderType = orderType; }
     
     public boolean isBuyOrder() { return isBuyOrder; }
     public void setBuyOrder(boolean buyOrder) { isBuyOrder = buyOrder; }
@@ -55,19 +57,19 @@ public class OrderRequestDto {
     
     // Validation helper methods
     public boolean isMarketOrder() {
-        return "MARKET".equalsIgnoreCase(orderType);
+        return orderType == OrderType.MARKET;
     }
     
     public boolean isLimitOrder() {
-        return "LIMIT".equalsIgnoreCase(orderType);
+        return orderType == OrderType.LIMIT;
     }
     
     public boolean isStopOrder() {
-        return "STOP".equalsIgnoreCase(orderType);
+        return orderType == OrderType.STOP;
     }
     
     public boolean isStopLimitOrder() {
-        return "STOP_LIMIT".equalsIgnoreCase(orderType);
+        return orderType == OrderType.STOP_LIMIT;
     }
     
     /**
@@ -75,7 +77,7 @@ public class OrderRequestDto {
      * @return Validation error message, or null if valid
      */
     public String validate() {
-        if (orderType == null || orderType.trim().isEmpty()) {
+        if (orderType == null) {
             return "Order type is required";
         }
         

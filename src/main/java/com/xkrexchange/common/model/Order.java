@@ -42,28 +42,28 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
     }
 
     //LIMIT ORDER
-    public Order newLimitOrder(long cId, OrderType oT, boolean iB, int shares, Asset a, Price eP){
+    public static Order newLimitOrder(long cId, OrderType oT, boolean iB, int shares, Asset a, Price eP){
         assert  oT == OrderType.LIMIT;
 
         return new Order(cId, oT, iB, shares, a, eP, null);
     }
 
     //MARKET ORDER
-    public Order newMarketOrder(long cId, OrderType oT, boolean iB, int shares, Asset a){
+    public static Order newMarketOrder(long cId, OrderType oT, boolean iB, int shares, Asset a){
         assert  oT == OrderType.MARKET;
 
         return  new Order(cId, oT, iB, shares, a, null, null);
     }
 
     //STOP ORDER
-    public Order newStopOrder(long cId, OrderType oT, boolean iB, int shares, Asset a, Price tP){
+    public static Order newStopOrder(long cId, OrderType oT, boolean iB, int shares, Asset a, Price tP){
         assert  oT == OrderType.STOP;
 
         return  new Order(cId, oT, iB, shares, a, null, tP);
     }
 
     //STOP_LIMIT ORDER
-    public Order newStopLimitOrder(long cId, OrderType oT, boolean iB, int shares, Asset a, Price eP, Price tP){
+    public static Order newStopLimitOrder(long cId, OrderType oT, boolean iB, int shares, Asset a, Price eP, Price tP){
         assert oT == OrderType.STOP_LIMIT;
 
         return new Order(cId, oT, iB, shares, a, eP, tP);

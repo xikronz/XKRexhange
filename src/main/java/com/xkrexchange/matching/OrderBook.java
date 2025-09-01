@@ -2,12 +2,9 @@ package com.xkrexchange.matching;
 import java.math.BigDecimal;
 import java.util.*;
 
-import com.xkrexchange.common.model.Price;
-import com.xkrexchange.common.model.Identifiable;
-import com.xkrexchange.common.model.Order;
+import com.xkrexchange.common.model.*;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
-
 
 /** Logic behind matching orders and keeping track of NBBO prices so that Pro-Rata Priority can be implemented when fulfilling orders
  * CLASS INVARIANT: Orderbooks must be Assigned to a UNIQUE asset object only
@@ -19,11 +16,14 @@ public class OrderBook extends Identifiable<OrderBook>{
     // Ask side: Lowest prices first (ascending order) 
     private ConcurrentSkipListMap<Price, LinkedBlockingQueue<Order>> asks = new ConcurrentSkipListMap<>();
 
+    private Asset asset; 
+
     private BigDecimal tick; 
 
-    public OrderBook(){
+    public OrderBook(Asset a){
         super();
         tick = new BigDecimal("0.01");
+        this.asset = a; 
     }
 
     public OrderBook(BigDecimal t){
@@ -35,24 +35,35 @@ public class OrderBook extends Identifiable<OrderBook>{
         return getId();
     }
 
-    public Order getNationalBestBid(){
-        Map.Entry<Price, LinkedBlockingQueue<Order>> bestEntry = this.bids.firstEntry();
-        if (bestEntry == null || bestEntry.getValue().isEmpty()) {
-            return null;
+    public Order getNationalBestBid() throws NoLiquidityException, MissingOrderException, NullPointerException {
+        if (bids.isEmpty()){
+            throw new NoLiquidityException(String.format("No liquidity on bids available for %s", getAsset())); 
         }
-        return bestEntry.getValue().peek(); // Get first order at best price
+
+        Map.Entry<Price, LinkedBlockingQueue<Order>> bestBids = bids.firstEntry();
+        
+        if (bestBids.getValue().isEmpty()){
+            throw new MissingOrderException(String.format("Asset {%s} trading at ${%s} has no current bid orders", getAsset(), bestBids.getKey())); 
+        }
+
+        return bestBids.getValue().peek(); 
     }
 
-    public Order getNationalBestOffer(){
-        Map.Entry<Price, LinkedBlockingQueue<Order>> bestEntry = this.asks.firstEntry(); 
-
-        if (bestEntry == null || bestEntry.getValue().isEmpty()) {
-            return null;
+    public Order getNationalBestOffer() throws NoLiquidityException, MissingOrderException, NullPointerException{
+        if (asks.isEmpty()){
+            throw new NoLiquidityException(String.format("No liquidity on asks available for %s", getAsset()));
         }
-        return bestEntry.getValue().peek();
+
+        Map.Entry<Price, LinkedBlockingQueue<Order>> bestAsks = asks.firstEntry(); 
+
+        if (bestAsks.getValue().isEmpty()){
+            throw new MissingOrderException(String.format("Asset {%s} trading at ${%s} has no current bid orders", getAsset(), bestAsks.getKey()));
+        }
+
+        return bestAsks.getValue().peek(); 
     }
 
-    public void addOrder(Order o){
+    public void submitOrder(Order o){
         switch (o.getOrderType()){
             case MARKET:
                 executeMarketOrder(o);
@@ -70,21 +81,24 @@ public class OrderBook extends Identifiable<OrderBook>{
         return;
     }
 
-    //HIGHEST EXECUTION PRIORITY 
-    private void executeMarketOrder(Order o) throws NoLiquidityException{
+    private void addToBook(Order o){
+        Price orderPrice = o.getExecutionPrice(); 
         if (o.isBid()){
-            if (asks.isEmpty()){
-                throw new NoLiquidityException(String.format("There are no asks listed to fulfill Market Buy Order on %s", o.getAsset())); 
-            }
+            bids.computeIfAbsent(orderPrice, k -> new LinkedBlockingQueue<>()).add(o); 
+        } else {
+            asks.computeIfAbsent(orderPrice, k-> new LinkedBlockingQueue<>()).add(o); 
+        }
+    }
+
+    //HIGHEST EXECUTION PRIORITY 
+    private void executeMarketOrder(Order o) throws NoLiquidityException, MissingOrderException, NullPointerException{
+        if (o.isBid()){
                 while (!o.isFullyFilled()){
                     Order bestOffer = getNationalBestOffer(); 
                     executeTrade(bestOffer, o);
                 }
             }
         else{
-            if (bids.isEmpty()){
-                throw new NoLiquidityException(String.format("There are no bids listed to fulfill the Market Sell Order on %s", o.getAsset()));
-            }
             while (!o.isFullyFilled()){
                 Order bestAsk = getNationalBestBid(); 
                 executeTrade(o, bestAsk);
@@ -92,7 +106,25 @@ public class OrderBook extends Identifiable<OrderBook>{
         }
     }
 
-    private void executeLimitOrder(Order o){
+    private void executeLimitOrder(Order o) throws NullPointerException{
+        if (o.getExecutionPrice().equals(new BigDecimal("0"))){
+            throw new UnsupportedOperationException(); 
+        }
+        if (o.isBid()){
+            while(!o.isFullyFilled()){
+                try{
+                    Order bestOffer = getNationalBestOffer(); 
+                    executeTrade(o, bestOffer);
+                } catch (NoLiquidityException e){
+                    addToBook(o); 
+                }
+            }
+        }
+    }
+
+
+
+    private void executeLimitOrderS(Order o){
         if (o.isBid()){
             // BUY LIMIT: Try to match against asks at or below limit price
             while (!o.isFullyFilled() && !asks.isEmpty()) {
@@ -120,7 +152,7 @@ public class OrderBook extends Identifiable<OrderBook>{
             
             // Post any remaining quantity to bid book
             if (!o.isFullyFilled()) {
-                addToBook(o, bids);
+                addToBook(o);
             }
             
         } else {
@@ -150,7 +182,7 @@ public class OrderBook extends Identifiable<OrderBook>{
             
             // Post any remaining quantity to ask book
             if (!o.isFullyFilled()) {
-                addToBook(o, asks);
+                addToBook(o);
             }
         }
     }
@@ -165,35 +197,8 @@ public class OrderBook extends Identifiable<OrderBook>{
     public void setTick(BigDecimal t){
         this.tick = t; 
     }
-    
-    /**
-     * Validates that a price is a valid multiple of the tick size
-     * @param price Price to validate
-     * @throws IllegalArgumentException if price is not a valid tick multiple
-     */
-    private void validateTickSize(Price price) throws IllegalArgumentException{
-        BigDecimal priceValue = price.getValue(); // Assuming Price has getValue() method
-        
-        // Check if price is a multiple of tick size
-        BigDecimal remainder = priceValue.remainder(tick);
-        if (remainder.compareTo(BigDecimal.ZERO) != 0) {
-            throw new IllegalArgumentException(
-                String.format("Price %s is not a valid multiple of tick size %s. " +
-                            "Valid price must be divisible by %s", 
-                            priceValue, tick, tick));
-        }
+ 
+    public Asset getAsset(){
+        return asset; 
     }
-    
-    /**
-     * Helper method to validate and add order to the appropriate book side
-     * @param order Order to add
-     * @param book The book (bids or asks) to add to
-     */
-    private void addToBook(Order order, ConcurrentSkipListMap<Price, LinkedBlockingQueue<Order>> book) {
-        Price orderPrice = order.getExecutionPrice();
-        
-        validateTickSize(orderPrice);
-        book.computeIfAbsent(orderPrice, k -> new LinkedBlockingQueue<>()).add(order);
-    }
-
 }
