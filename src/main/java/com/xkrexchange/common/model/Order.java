@@ -15,7 +15,7 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
     private final Price triggerPrice; // For STOP and STOP_LOSS orders
 
     private int remaining; 
-    private boolean isFullyFilled = false; 
+    private boolean isCompleted = false; 
 
     /**
      * Overloaded Order constructor to initialize a LIMIT order
@@ -69,8 +69,12 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
         return new Order(cId, oT, iB, shares, a, eP, tP);
     }
 
-    public boolean isFullyFilled(){
-        return isFullyFilled; 
+    public boolean isCompleted(){
+        return isCompleted; 
+    }
+
+    public void completeOrder(){
+        isCompleted = true; 
     }
 
     public void updateOrder(Order o){

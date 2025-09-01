@@ -93,13 +93,13 @@ public class OrderBook extends Identifiable<OrderBook>{
     //HIGHEST EXECUTION PRIORITY 
     private void executeMarketOrder(Order o) throws NoLiquidityException, MissingOrderException, NullPointerException{
         if (o.isBid()){
-                while (!o.isFullyFilled()){
+                while (!o.isCompleted()){
                     Order bestOffer = getNationalBestOffer(); 
                     executeTrade(bestOffer, o);
                 }
             }
         else{
-            while (!o.isFullyFilled()){
+            while (!o.isCompleted()){
                 Order bestAsk = getNationalBestBid(); 
                 executeTrade(o, bestAsk);
             }
@@ -107,82 +107,35 @@ public class OrderBook extends Identifiable<OrderBook>{
     }
 
     private void executeLimitOrder(Order o) throws NullPointerException{
-        if (o.getExecutionPrice().equals(new BigDecimal("0"))){
-            throw new UnsupportedOperationException(); 
-        }
         if (o.isBid()){
-            while(!o.isFullyFilled()){
+            while(!o.isCompleted()){
                 try{
                     Order bestOffer = getNationalBestOffer(); 
-                    executeTrade(o, bestOffer);
+                    Price clientBid = o.getExecutionPrice(); 
+                    if (clientBid.compareTo(bestOffer.getExecutionPrice())>=0){
+                        executeTrade(o, bestOffer);
+                    } else {
+                        //posting any remaining quantities in the order onto the orderbook 
+                        addToBook(o);
+                    }
                 } catch (NoLiquidityException e){
                     addToBook(o); 
-                }
+                } 
             }
-        }
-    }
-
-
-
-    private void executeLimitOrderS(Order o){
-        if (o.isBid()){
-            // BUY LIMIT: Try to match against asks at or below limit price
-            while (!o.isFullyFilled() && !asks.isEmpty()) {
-                Map.Entry<Price, LinkedBlockingQueue<Order>> bestAsk = asks.firstEntry();
-                Price askPrice = bestAsk.getKey();
-                
-                // Can only match if ask price <= limit price (favorable for buyer)
-                if (askPrice.compareTo(o.getExecutionPrice()) > 0) {
-                    break; // No more favorable matches available
-                }
-                
-                Order bestOffer = bestAsk.getValue().peek();
-                if (bestOffer != null) {
-                    executeTrade(o, bestOffer);
-                    
-                    // Remove fully filled orders from book
-                    if (bestOffer.isFullyFilled()) {
-                        bestAsk.getValue().poll();
-                        if (bestAsk.getValue().isEmpty()) {
-                            asks.remove(askPrice);
-                        }
-                    }
-                }
-            }
-            
-            // Post any remaining quantity to bid book
-            if (!o.isFullyFilled()) {
-                addToBook(o);
-            }
-            
         } else {
-            // SELL LIMIT: Try to match against bids at or above limit price
-            while (!o.isFullyFilled() && !bids.isEmpty()) {
-                Map.Entry<Price, LinkedBlockingQueue<Order>> bestBid = bids.firstEntry();
-                Price bidPrice = bestBid.getKey();
-                
-                // Can only match if bid price >= limit price (favorable for seller)
-                if (bidPrice.compareTo(o.getExecutionPrice()) < 0) {
-                    break; // No more favorable matches available
-                }
-                
-                Order bestBid_order = bestBid.getValue().peek();
-                if (bestBid_order != null) {
-                    executeTrade(bestBid_order, o);
-                    
-                    // Remove fully filled orders from book
-                    if (bestBid_order.isFullyFilled()) {
-                        bestBid.getValue().poll();
-                        if (bestBid.getValue().isEmpty()) {
-                            bids.remove(bidPrice);
-                        }
+            while (!o.isCompleted()){
+                try{
+                    Order bestBid = getNationalBestBid(); 
+                    Price clientPrice = o.getExecutionPrice(); 
+
+                    if (clientPrice.compareTo(bestBid.getExecutionPrice())<=0){
+                        executeTrade(bestBid, o);
+                    } else {
+                        addToBook(o);
                     }
+                } catch (NoLiquidityException e){
+                    addToBook(o);
                 }
-            }
-            
-            // Post any remaining quantity to ask book
-            if (!o.isFullyFilled()) {
-                addToBook(o);
             }
         }
     }
