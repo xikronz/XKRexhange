@@ -78,7 +78,10 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
     }
 
     public void updateOrder(Order o){
-        remaining = remaining - o.quantity;
+        remaining = remaining - o.getQuantity();
+        if (remaining==0){
+            completeOrder();
+        }
     }
 
     // Getter methods
@@ -99,7 +102,7 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
     }
 
     public int getQuantity() {
-        return quantity;
+        return remaining;
     }
 
     public Asset getAsset(){

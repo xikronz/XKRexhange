@@ -29,7 +29,7 @@ class OrderBookTesting {
 
         Order temp = Order.newLimitOrder(clientID, OrderType.LIMIT, true, 100, tesla, purcahse); 
 
-        java.lang.System.out.println();
+        java.lang.System.out.println(temp);
 
     }
 

@@ -27,7 +27,7 @@ public class OrderBook extends Identifiable<OrderBook>{
         return getId();
     }
 
-    public Order getNationalBestBid(){
+    public LinkedBlockingQueue<Order> getNationalBestBids(){
         if (bids.isEmpty()){
             return null; 
         }
@@ -36,10 +36,10 @@ public class OrderBook extends Identifiable<OrderBook>{
         if (bestBids.getValue().isEmpty()){
             return null; 
         }
-        return bestBids.getValue().peek(); 
+        return bestBids.getValue(); 
     }
 
-    public Order getNationalBestOffer(){
+    public LinkedBlockingQueue<Order> getNationalBestOffers(){
         if (asks.isEmpty()){
             return null; 
         }
@@ -47,7 +47,7 @@ public class OrderBook extends Identifiable<OrderBook>{
         if (bestAsks.getValue().isEmpty()){
             return null; 
         }
-        return bestAsks.getValue().peek(); 
+        return bestAsks.getValue(); 
     }
 
     public void submitOrder(Order o){
@@ -64,8 +64,29 @@ public class OrderBook extends Identifiable<OrderBook>{
         }
     }
 
-    private void executeTrade(Order bid, Order ask){
-        return;
+    private void executeTrade(Order o, Order bestMatch, LinkedBlockingQueue<Order> bestMatches){
+
+        //check which order is the aggressor and which is the passive one 
+
+        //if o penetrates the bestMatch
+
+        if (o.getQuantity()> bestMatch.getQuantity()){
+            // remove bestMatch from the Queue 
+            bestMatches.poll(); 
+            // complete the transaction (create a log)
+            
+            // update the status of o and bestMatch 
+            o.updateOrder(bestMatch);
+            bestMatch.completeOrder();
+            
+        }
+        else{ 
+            // update teh bestMatch object's remaining quantity object with the same params (including orderId) and quantity = bestMatch.shares - o.shares
+            bestMatch.updateOrder(o);
+            // complete transaction (create a log)
+            // update status of o and the quantity remaining in bestMatch
+            o.completeOrder();
+        }
     }
 
     private void addToBook(Order o){
@@ -79,34 +100,26 @@ public class OrderBook extends Identifiable<OrderBook>{
 
     //HIGHEST EXECUTION PRIORITY 
     private void executeMarketOrder(Order o){
-        if (o.isBid()){
-                while (!o.isCompleted()){
-                    Order bestOffer = getNationalBestOffer(); 
-                    if (bestOffer==null){
-                        break; 
-                    }
-                    executeTrade(bestOffer, o);
-                }
-            }
-        else{
-            while (!o.isCompleted()){
-                Order bestAsk = getNationalBestBid(); 
-                if (bestAsk==null){
-                    break; 
-                }        
-                executeTrade(o, bestAsk);
+        while (!o.isCompleted()){
+            LinkedBlockingQueue<Order> bestMatches = o.isBid()? getNationalBestOffers(): getNationalBestBids(); 
+
+            Order bestMatch = bestMatches.peek(); 
+            if (bestMatch!=null && o.getClientId() != bestMatch.getClientId()){
+                executeTrade(o, bestMatch, bestMatches); 
             }
         }
+
+        // TODO: decide on cancel or post order if market order penetrates all liquidity 
     }
 
     private void executeLimitOrder(Order o){
 
         while (!o.isCompleted()){
-            Order bestMatch = o.isBid()? getNationalBestOffer(): getNationalBestBid(); 
-
+            LinkedBlockingQueue<Order> bestMatches = o.isBid()? getNationalBestOffers(): getNationalBestBids(); 
+            Order bestMatch = bestMatches.peek(); 
             if (bestMatch == null){ break;}
             if (canTrade(o, bestMatch)){
-                executeTrade(o, bestMatch);
+                executeTrade(o, bestMatch, bestMatches);
             } else {
                 break; 
             }
@@ -130,10 +143,6 @@ public class OrderBook extends Identifiable<OrderBook>{
         return;
     }
 
-    public void setTick(BigDecimal t){
-        this.tick = t; 
-    }
- 
     public Asset getAsset(){
         return asset; 
     }
