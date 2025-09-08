@@ -16,6 +16,9 @@ public class OrderBook extends Identifiable<OrderBook>{
     // Ask side: Lowest prices first (ascending order) 
     private ConcurrentSkipListMap<Price, LinkedBlockingQueue<Order>> asks = new ConcurrentSkipListMap<>();
 
+    private ConcurrentSkipListMap<Price, LinkedBlockingQueue<Order>> stop = new ConcurrentSkipListMap<>();
+    private ConcurrentSkipListMap<Price, LinkedBlockingQueue<Order>> stop_limit = new ConcurrentSkipListMap<>();
+
     private Asset asset; 
 
     public OrderBook(Asset a){
@@ -65,7 +68,6 @@ public class OrderBook extends Identifiable<OrderBook>{
     }
 
     private void executeTrade(Order o, Order bestMatch, LinkedBlockingQueue<Order> bestMatches){
-
         //check which order is the aggressor and which is the passive one 
 
         //if o penetrates the bestMatch
