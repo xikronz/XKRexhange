@@ -1,4 +1,4 @@
-package com.xkrexchange.gateway;
+package com.xkrexchange.config;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;

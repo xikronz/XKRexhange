@@ -77,6 +77,23 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
         isCompleted = true; 
     }
 
+    /**
+     * Update order after partial fill
+     * @param filledQuantity - quantity that was filled
+     */
+    public void fillOrder(int filledQuantity, Price fillPrice) {
+        remaining = remaining - filledQuantity;
+        if (remaining <= 0) {
+            remaining = 0;
+            completeOrder();
+        }
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     * @deprecated Use fillOrder(int, Price) instead
+     */
+    @Deprecated
     public void updateOrder(Order o){
         remaining = remaining - o.getQuantity();
         if (remaining==0){
@@ -101,7 +118,19 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
         return isBid;
     }
 
+    /**
+     * Get the original quantity of the order
+     * @return original order quantity
+     */
     public int getQuantity() {
+        return quantity;
+    }
+
+    /**
+     * Get the remaining unfilled quantity
+     * @return remaining quantity to be filled
+     */
+    public int getRemainingQuantity() {
         return remaining;
     }
 
@@ -115,6 +144,19 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
 
     public Price getTriggerPrice() {
         return triggerPrice;
+    }
+
+    /**
+     * Get the stop price for stop orders
+     * For STOP orders, this is the trigger price
+     * For STOP_LIMIT orders, this is also the trigger price
+     * @return stop price or null if not a stop order
+     */
+    public Price getStopPrice() {
+        if (orderType == OrderType.STOP || orderType == OrderType.STOP_LIMIT) {
+            return triggerPrice;
+        }
+        return null;
     }
 
     /**
@@ -133,7 +175,7 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
 
     @Override
     public String toString() {
-        return String.format("Order{id=%d, clientId=%d, type=%s, %s, quantity=%d, asset=%s, execPrice=%s, triggerPrice=%s}",
-                getId(), clientId, orderType, isBid ? "BUY" : "SELL", quantity, asset, executionPrice, triggerPrice);
+        return String.format("Order{id=%d, clientId=%d, type=%s, %s, quantity=%d/%d, asset=%s, execPrice=%s, triggerPrice=%s}",
+                getId(), clientId, orderType, isBid ? "BUY" : "SELL", remaining, quantity, asset, executionPrice, triggerPrice);
     }
 }
