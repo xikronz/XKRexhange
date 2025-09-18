@@ -256,11 +256,10 @@ class OrderBookTesting {
     void testSellStopOrderTriggering() throws InterruptedException {
         orderBook.startMatchingEngine();
         
-        Price currentPrice = new Price(new BigDecimal("100.00"));
         Price stopPrice = new Price(new BigDecimal("98.00"));
         Price liquidityPrice = new Price(new BigDecimal("97.00"));
         
-        // Create initial liquidity at lower price
+        // Create initial liquidity at lower price for when stop triggers
         Order buyLiquidity = Order.newLimitOrder(1001L, OrderType.LIMIT, true, 100, testAsset, liquidityPrice);
         orderBook.submitOrder(buyLiquidity);
         
@@ -271,9 +270,13 @@ class OrderBookTesting {
         Thread.sleep(100);
         assertEquals(1, orderBook.getStopOrderCount());
         
-        // Trigger with trade at stop price
-        Order triggerOrder = Order.newLimitOrder(1003L, OrderType.LIMIT, false, 10, testAsset, stopPrice);
-        orderBook.submitOrder(triggerOrder);
+        // Create a sell order at stop price and a buy order to match it - this will execute a trade at stop price
+        Order sellAtStopPrice = Order.newLimitOrder(1003L, OrderType.LIMIT, false, 10, testAsset, stopPrice);
+        Order buyAtStopPrice = Order.newLimitOrder(1004L, OrderType.LIMIT, true, 10, testAsset, stopPrice);
+        
+        orderBook.submitOrder(sellAtStopPrice);
+        Thread.sleep(50);
+        orderBook.submitOrder(buyAtStopPrice); // This should execute and set lastTradePrice to stopPrice
         
         Thread.sleep(200);
         
@@ -291,20 +294,20 @@ class OrderBookTesting {
         Price stopPrice = new Price(new BigDecimal("102.00"));
         Price limitPrice = new Price(new BigDecimal("103.00"));
         
-        // Submit stop-limit order
         Order stopLimit = Order.newStopLimitOrder(1001L, OrderType.STOP_LIMIT, true, 100, testAsset, limitPrice, stopPrice);
         orderBook.submitOrder(stopLimit);
         
         Thread.sleep(100);
         assertEquals(1, orderBook.getStopOrderCount());
         
-        // Trigger the stop-limit
-        Order triggerTrade = Order.newLimitOrder(1002L, OrderType.LIMIT, true, 10, testAsset, stopPrice);
-        orderBook.submitOrder(triggerTrade);
+        Order sellAtStopPrice = Order.newLimitOrder(1002L, OrderType.LIMIT, false, 10, testAsset, stopPrice);
+        Order buyAtStopPrice = Order.newLimitOrder(1003L, OrderType.LIMIT, true, 10, testAsset, stopPrice);
+        
+        orderBook.submitOrder(sellAtStopPrice);
+        Thread.sleep(50);
+        orderBook.submitOrder(buyAtStopPrice); 
         
         Thread.sleep(200);
-        
-        // Stop-limit should convert to limit order and post to book
         assertEquals(0, orderBook.getStopOrderCount());
         assertNotNull(orderBook.getNationalBestBids());
         assertEquals(limitPrice, orderBook.getNationalBestBidPrice());
