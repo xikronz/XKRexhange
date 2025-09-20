@@ -16,6 +16,9 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
 
     private int remaining; 
     private boolean isCompleted = false; 
+    
+    // NEW: Link to database record
+    private Long databaseId; // Set after order is saved to database
 
     /**
      * Overloaded Order constructor to initialize a LIMIT order
@@ -157,6 +160,22 @@ public class Order extends Identifiable<Order> implements Comparable<Order>{
             return triggerPrice;
         }
         return null;
+    }
+    
+    /**
+     * Get the database ID for this order
+     * @return database ID or null if not yet saved
+     */
+    public Long getDatabaseId() {
+        return databaseId;
+    }
+    
+    /**
+     * Set the database ID for this order (called after saving to DB)
+     * @param databaseId the ID assigned by the database
+     */
+    public void setDatabaseId(Long databaseId) {
+        this.databaseId = databaseId;
     }
 
     /**
